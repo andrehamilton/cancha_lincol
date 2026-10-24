@@ -2,7 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $projectPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $distributionPath = Join-Path $projectPath "dist\Cancha"
-$outputPath = Join-Path $projectPath "dist\installer\Cancha-Setup-1.0.0.exe"
+$version = "1.1.0"
+$outputPath = Join-Path $projectPath "dist\installer\Cancha-Setup-$version.exe"
 $iexpressPath = Join-Path $env:WINDIR "System32\iexpress.exe"
 $temporaryRoot = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
 $stagingPath = Join-Path $env:TEMP ("CanchaInstaller-" + [guid]::NewGuid().ToString('N'))
@@ -26,8 +27,12 @@ $menuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Cancha"
 $uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Cancha"
 
 try {
+    if (Get-Process -Name "Cancha" -ErrorAction SilentlyContinue) {
+        throw "Cierra Cancha antes de instalar la actualización."
+    }
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Expand-Archive -LiteralPath (Join-Path $PSScriptRoot "Cancha.zip") -DestinationPath $installDir -Force
+    Set-Content -LiteralPath (Join-Path $installDir "version.txt") -Value "1.1.0" -Encoding ASCII
     $uninstaller = Join-Path $installDir "uninstall.ps1"
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "uninstall.ps1") -Destination $uninstaller -Force
 
@@ -48,7 +53,7 @@ try {
 
     New-Item -Path $uninstallKey -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name DisplayName -Value "Cancha" -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.0.0" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.1.0" -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name InstallLocation -Value $installDir -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name UninstallString -Value "`"$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$uninstaller`"" -PropertyType String -Force | Out-Null
 
@@ -76,7 +81,7 @@ Start-Process -FilePath "$env:WINDIR\System32\cmd.exe" -ArgumentList "/c $comman
 '@
 Set-Content -LiteralPath (Join-Path $stagingPath "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
 
-$temporaryInstaller = Join-Path $stagingPath "Cancha-Setup-1.0.0.exe"
+$temporaryInstaller = Join-Path $stagingPath "Cancha-Setup-$version.exe"
 $sedContent = @"
 [Version]
 Class=IEXPRESS
@@ -94,7 +99,7 @@ InstallPrompt=
 DisplayLicense=
 FinishMessage=
 TargetName=$temporaryInstaller
-FriendlyName=Cancha
+FriendlyName=Cancha $version
 AppLaunched=powershell.exe -NoProfile -ExecutionPolicy Bypass -File install.ps1
 PostInstallCmd=<None>
 AdminQuietInstCmd=
