@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6735a8">
+  <title>Cancha | Administración</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <div class="login-art">
+      <div class="art-mark">C<span>.</span></div>
+      <div class="art-copy"><span class="eyebrow">GESTIÓN DEPORTIVA</span><h1>El juego<br>empieza aquí.</h1><p>Administra tus reservas, productos e inventario desde cualquier lugar.</p></div>
+      <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-ball">●</div>
+    </div>
+    <form class="login-card" id="loginForm">
+      <div class="mobile-brand">CANCHA<span>.</span></div>
+      <span class="eyebrow">BIENVENIDO DE NUEVO</span><h2>Iniciar sesión</h2><p class="muted">Ingresa con tu cuenta para continuar.</p>
+      <label class="register-name hidden" id="registerNameLabel">Nombre completo<input id="registerName" type="text" autocomplete="name" placeholder="Tu nombre"></label>
+      <label>Correo electrónico<input id="email" type="email" autocomplete="username" placeholder="tu@correo.com" required></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label>
+      <label class="register-confirm hidden" id="registerConfirmLabel">Confirmar contraseña<input id="registerConfirm" type="password" autocomplete="new-password" placeholder="Repite la contraseña"></label>
+      <button class="button primary full" type="submit">Ingresar <span>→</span></button>
+      <button class="text-button full" type="button" id="forgotButton">¿Olvidaste tu contraseña?</button>
+      <div class="notice" id="loginNotice" role="status"></div>
+      <p class="login-foot"><span id="loginFootLabel">¿No tienes cuenta?</span> <button class="text-button inline" type="button" id="registerButton">Crear cuenta</button></p>
+    </form>
+  </section>
+
+  <div class="app hidden" id="app">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#inicio"><span class="brand-symbol">C</span><span>CANCHA<small>GESTIÓN DEPORTIVA</small></span></a>
+      <div class="nav-label">MENÚ PRINCIPAL</div>
+      <nav id="navigation">
+        <button class="nav-item active" data-page="inicio"><span class="nav-icon">⌂</span>Inicio</button>
+        <button class="nav-item" data-page="reservas"><span class="nav-icon">▦</span>Reservas</button>
+        <button class="nav-item" data-page="inventario"><span class="nav-icon">▤</span>Inventario</button>
+        <button class="nav-item" data-page="productos"><span class="nav-icon">◇</span>Productos</button>
+        <button class="nav-item" data-page="reportes"><span class="nav-icon">⌁</span>Reportes</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="sync-note"><span class="sync-dot"></span><span>Datos sincronizados<small>Almacenamiento compartido</small></span></div><button class="nav-item" data-page="perfil"><span class="nav-icon">◉</span>Mi perfil</button><button class="nav-item" id="logoutButton"><span class="nav-icon">↪</span>Cerrar sesión</button></div>
+    </aside>
+    <div class="sidebar-scrim" id="sidebarScrim"></div>
+    <main class="main-area">
+      <header class="topbar"><button class="icon-button menu-toggle" id="menuToggle" aria-label="Abrir menú">☰</button><div class="breadcrumbs">CANCHA <span>/</span> <b id="crumb">Inicio</b></div><div class="topbar-right"><span class="today-label" id="todayLabel"></span><button class="avatar" id="avatar">C</button></div></header>
+      <div class="content" id="content"></div>
+    </main>
+    <nav class="mobile-nav" id="mobileNav"><button class="active" data-page="inicio"><span>⌂</span>Inicio</button><button data-page="reservas"><span>▦</span>Reservas</button><button data-page="inventario"><span>▤</span>Inventario</button><button data-page="productos"><span>◇</span>Productos</button><button data-page="reportes"><span>⌁</span>Reportes</button></nav>
+  </div>
+
+  <dialog id="modal"><form method="dialog" class="modal-card" id="modalForm"><button class="modal-close" value="cancel" aria-label="Cerrar">×</button><div id="modalBody"></div></form></dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <script defer src="app.js"></script>
+</body>
+</html>
