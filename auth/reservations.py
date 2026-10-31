@@ -314,21 +314,20 @@ class ReservationDialog(QtWidgets.QDialog):
         self.time.setReadOnly(True)
         self.time.setButtonSymbols(QtWidgets.QAbstractSpinBox.ButtonSymbols.NoButtons)
         self.duration = QtWidgets.QSpinBox()
-        self.duration.setRange(30, 720)
-        self.duration.setSingleStep(30)
+        self.duration.setRange(15, 720)
+        self.duration.setSingleStep(15)
         self.duration.setValue(60)
         self.duration.setSuffix(" min")
+        self.duration.lineEdit().setReadOnly(True)
         date_row.addWidget(QtWidgets.QLabel("Fecha"))
         date_row.addWidget(self.date)
-        date_row.addWidget(QtWidgets.QLabel("Hora de inicio"))
-        date_row.addWidget(self.time)
         date_row.addWidget(QtWidgets.QLabel("Tiempo"))
         date_row.addWidget(self.duration)
         schedule_layout.addLayout(date_row)
         self.availability_status = QtWidgets.QLabel("Horarios ocupados sombreados · selecciona una hora libre")
         self.availability_status.setStyleSheet(f"color: {palette['muted']}; font-size: 11px;")
         schedule_layout.addWidget(self.availability_status)
-        self.availability_table = QtWidgets.QTableWidget(8, 6)
+        self.availability_table = QtWidgets.QTableWidget(8, 12)
         self.availability_table.setObjectName("reservationAvailabilityTable")
         self.availability_table.horizontalHeader().hide()
         self.availability_table.verticalHeader().hide()
@@ -379,13 +378,30 @@ class ReservationDialog(QtWidgets.QDialog):
             f"background: {palette['highlight']}; color: {palette['muted']};"
         )
         self.manager_document_type, manager_document_row = self._document_input_row()
+        saved_document_type = self.user.get("document_type") or "DNI"
+        self.manager_document_type.setCurrentText(saved_document_type)
+        self.manager_document_type.setEnabled(False)
+        self.manager_document_type.setStyleSheet(
+            f"QComboBox:disabled {{ background: {palette['highlight']}; "
+            f"color: {palette['muted']}; }}"
+        )
         manager_layout.addLayout(manager_document_row)
-        self.manager_document = QtWidgets.QLineEdit()
+        self.manager_document = QtWidgets.QLineEdit(str(self.user.get("dni") or ""))
         self._configure_document_field(self.manager_document, self.manager_document_type)
+        self.manager_document.setReadOnly(True)
+        self.manager_document.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.manager_document.setStyleSheet(
+            f"background: {palette['highlight']}; color: {palette['muted']};"
+        )
         manager_layout.addWidget(self.manager_document)
-        self.manager_phone = QtWidgets.QLineEdit()
+        self.manager_phone = QtWidgets.QLineEdit(str(self.user.get("phone") or ""))
         self.manager_phone.setPlaceholderText("Celular: 9 dígitos")
         self._configure_phone_field(self.manager_phone)
+        self.manager_phone.setReadOnly(True)
+        self.manager_phone.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.manager_phone.setStyleSheet(
+            f"background: {palette['highlight']}; color: {palette['muted']};"
+        )
         for field in (self.manager_name, self.manager_phone):
             manager_layout.addWidget(field)
         layout.addWidget(manager)
@@ -439,8 +455,8 @@ class ReservationDialog(QtWidgets.QDialog):
         now = peru_now()
         is_today = self.date.date() == QtCore.QDate(now.year, now.month, now.day)
         selected_item = None
-        for index in range(48):
-            start = index * 30
+        for index in range(96):
+            start = index * 15
             end = start + duration
             time_text = f"{start // 60:02d}:{start % 60:02d}"
             conflict = next((row for row in reserved
@@ -462,7 +478,7 @@ class ReservationDialog(QtWidgets.QDialog):
                 item.setForeground(QtGui.QColor(palette["text"]))
                 if self.time.time().toString("HH:mm") == time_text:
                     selected_item = item
-            table.setItem(index // 6, index % 6, item)
+            table.setItem(index // 12, index % 12, item)
         if selected_item:
             table.setCurrentItem(selected_item)
 
