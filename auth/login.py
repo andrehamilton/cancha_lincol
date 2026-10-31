@@ -132,11 +132,16 @@ class LoginWindow(QtCore.QObject):
             "access_token": access_token,
             "refresh_token": response.get("refresh_token"),
         }
-        self.password_input.clear()
-        self.menu = MenuWindow(user, self.auth)
-        self.menu.logout_button.clicked.connect(lambda: self._sign_out(access_token))
-        self.menu.show()
-        self.window.hide()
+        try:
+            self.menu = MenuWindow(user, self.auth)
+            self.menu.logout_button.clicked.connect(lambda: self._sign_out(access_token))
+            self.menu.show()
+            self.window.hide()
+            self.password_input.clear()
+        except Exception as error:
+            # Windowed PyInstaller builds have no console, so surface startup
+            # errors in the login screen instead of silently losing the password.
+            self.status_label.setText(f"No se pudo abrir el menú: {error}")
 
     def _sign_out(self, access_token):
         if access_token:

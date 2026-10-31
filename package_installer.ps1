@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $projectPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $distributionPath = Join-Path $projectPath "dist\Cancha"
-$version = "1.1.0"
+$version = "1.2.0"
 $outputPath = Join-Path $projectPath "dist\installer\Cancha-Setup-$version.exe"
 $iexpressPath = Join-Path $env:WINDIR "System32\iexpress.exe"
 $temporaryRoot = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
@@ -32,7 +32,7 @@ try {
     }
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Expand-Archive -LiteralPath (Join-Path $PSScriptRoot "Cancha.zip") -DestinationPath $installDir -Force
-    Set-Content -LiteralPath (Join-Path $installDir "version.txt") -Value "1.1.0" -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $installDir "version.txt") -Value "1.2.0" -Encoding ASCII
     $uninstaller = Join-Path $installDir "uninstall.ps1"
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "uninstall.ps1") -Destination $uninstaller -Force
 
@@ -53,7 +53,7 @@ try {
 
     New-Item -Path $uninstallKey -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name DisplayName -Value "Cancha" -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.1.0" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.2.0" -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name InstallLocation -Value $installDir -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name UninstallString -Value "`"$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$uninstaller`"" -PropertyType String -Force | Out-Null
 

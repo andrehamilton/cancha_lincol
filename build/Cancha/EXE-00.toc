@@ -64,8 +64,8 @@
  [],
  False,
  False,
- 1792636237,
+ 1793408932,
  [('runw.exe',
    'C:\\Users\\PC\\Desktop\\IDAT\\Proyecto_cancha\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
- 'C:\\Users\\PC\\AppData\\Local\\Programs\\Python\\Python313\\python313.dll')
+ 'C:\\Users\\PC\\AppData\\Local\\Python\\pythoncore-3.15-64\\python315.dll')

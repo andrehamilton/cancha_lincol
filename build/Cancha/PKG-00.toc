@@ -39,7 +39,7 @@
   ('home',
    'C:\\Users\\PC\\Desktop\\IDAT\\Proyecto_cancha\\home.py',
    'PYSOURCE')],
- 'python313.dll',
+ 'python315.dll',
  True,
  False,
  False,
