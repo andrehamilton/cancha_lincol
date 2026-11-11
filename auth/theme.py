@@ -58,9 +58,9 @@ THEMES = {
 
 DEFAULT_THEME = "cancha"
 DIALOG_WIDTH = 1100
-DIALOG_HEIGHT = 720
+DIALOG_HEIGHT = 600
 DIALOG_MIN_WIDTH = 900
-DIALOG_MIN_HEIGHT = 620
+DIALOG_MIN_HEIGHT = 500
 SETTINGS_ORGANIZATION = "Cancha"
 SETTINGS_APPLICATION = "CanchaReservas"
 
@@ -92,6 +92,14 @@ QLineEdit, QPlainTextEdit, QDateEdit, QTimeEdit, QSpinBox, QDoubleSpinBox, QComb
 QLineEdit:focus, QPlainTextEdit:focus, QDateEdit:focus, QTimeEdit:focus,
 QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {{ border: 2px solid {palette['primary']}; }}
 QLineEdit:read-only {{ background: {palette['highlight']}; color: {palette['muted']}; }}
+QDateEdit::drop-down {{ background: {palette['highlight']}; border-left: 1px solid {palette['outline']}; width: 22px; }}
+QCalendarWidget QWidget {{ background: {palette['surface']}; color: {palette['text']}; }}
+QCalendarWidget QToolButton {{ background: {palette['primary']}; color: {button_text}; border: 0; border-radius: 4px; padding: 5px; }}
+QCalendarWidget QToolButton:hover {{ background: {palette['secondary']}; color: {accent_text}; }}
+QCalendarWidget QMenu {{ background: {palette['surface']}; color: {palette['text']}; }}
+QCalendarWidget QSpinBox {{ background: {palette['surface']}; color: {palette['text']}; selection-background-color: {palette['primary']}; }}
+QCalendarWidget QAbstractItemView {{ background: {palette['surface']}; color: {palette['text']}; selection-background-color: {palette['primary']}; selection-color: {button_text}; outline: 0; }}
+QCalendarWidget QAbstractItemView:disabled {{ color: {palette['muted']}; }}
 QPushButton {{ background: {palette['primary']}; color: {button_text}; border: none;
     border-radius: 8px; padding: 9px 14px; font-weight: 600; }}
 QPushButton:hover {{ background: {palette['text']}; }}

@@ -8,7 +8,7 @@ from .supabase_client import SupabaseAuth, SupabaseAuthError
 class RegisterDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Crear cuenta | Cancha")
+        self.setWindowTitle("Crear cuenta | App 1.0")
         self.setMinimumWidth(380)
         self.auth = SupabaseAuth()
         self.pending_email = ""

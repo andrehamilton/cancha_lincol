@@ -17,7 +17,7 @@ class LoginWindow(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self.auth = SupabaseAuth()
-        ui_path = resource_path("admin_login.ui")
+        ui_path = resource_path("ui/admin_login.ui")
         self.window = QUiLoader().load(str(ui_path))
         if self.window is None:
             raise RuntimeError(f"No se pudo cargar la interfaz: {ui_path}")
@@ -26,10 +26,10 @@ class LoginWindow(QtCore.QObject):
         self.status_label = self.window.findChild(QtWidgets.QLabel, "statusLabel")
         self.login_button = self.window.findChild(QtWidgets.QPushButton, "loginButton")
         self.forgot_button = self.window.findChild(QtWidgets.QPushButton, "forgotButton")
-        self.window.setWindowTitle("Cancha - Iniciar sesion")
-        self.window.findChild(QtWidgets.QLabel, "subtitle").setText("Ingresa con tu cuenta de Cancha")
+        self.window.setWindowTitle("App 1.0 - Iniciar sesion")
+        self.window.findChild(QtWidgets.QLabel, "subtitle").setText("Ingresa con tu cuenta de App 1.0")
         self.artwork = self.window.findChild(QtWidgets.QLabel, "artwork")
-        artwork_path = resource_path("sONIASQ.jpg")
+        artwork_path = resource_path("image/sONIASQ.jpg")
         self.artwork_source = QtGui.QPixmap(str(artwork_path))
         self.artwork.installEventFilter(self)
         self._fit_artwork()

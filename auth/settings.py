@@ -18,8 +18,8 @@ class SettingsDialog(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Temas | Cancha")
-        self.setMinimumSize(940, 620)
+        self.setWindowTitle("Temas | App 1.0")
+        self.setMinimumSize(940, 500)
         self.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         self.setStyleSheet(theme_stylesheet())
 
@@ -73,7 +73,7 @@ class SettingsDialog(QtWidgets.QDialog):
         )
         preview_layout = QtWidgets.QVBoxLayout(preview)
         preview_layout.setContentsMargins(8, 7, 8, 7)
-        sample = QtWidgets.QLabel("CANCHA")
+        sample = QtWidgets.QLabel("APP 1.0")
         sample.setStyleSheet(
             f"background:{palette['surface']}; color:{palette['primary']}; "
             f"border:1px solid {palette['outline']}; border-radius:5px; padding:5px; font-weight:700;"

@@ -135,7 +135,7 @@ class SalesReportChart(QtWidgets.QWidget):
 class ReportsDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, inventory_store=None, reservation_store=None):
         super().__init__(parent)
-        self.setWindowTitle("Reportes de ventas | Cancha")
+        self.setWindowTitle("Reportes de ventas | App 1.0")
         self.setMinimumSize(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT)
         self.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         self.setStyleSheet(theme_stylesheet())

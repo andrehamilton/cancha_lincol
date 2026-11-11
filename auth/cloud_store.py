@@ -358,17 +358,22 @@ class ReservationCloudStore(CloudStore):
 
     def _validate_and_check_overlap(self, record, exclude_id=None):
         from datetime import datetime
-        start = datetime.strptime(record["start_time"], "%H:%M")
+        def court_group(name):
+            normalized = str(name or "").casefold().replace("ó", "o").replace("é", "e")
+            return "volley" if "voley" in normalized or "volley" in normalized else "football"
+        start = datetime.strptime(str(record["start_time"])[:5], "%H:%M")
         begin = start.hour * 60 + start.minute
         finish = begin + int(record["duration_minutes"])
         if finish > 1440:
             raise ValueError("La reserva no puede terminar despues de la medianoche.")
         rows = self._request(self.TABLE,
-            f"?owner_id=eq.{self._owner_id}&reservation_date=eq.{record['reservation_date']}&status=in.(Reservada,Confirmada)&select=id,start_time,duration_minutes")
+            f"?owner_id=eq.{self._owner_id}&reservation_date=eq.{record['reservation_date']}&status=in.(Reservada,Confirmada)&select=id,court_name,start_time,duration_minutes")
         for row in rows:
             if str(row["id"]) == str(exclude_id):
                 continue
-            other = datetime.strptime(row["start_time"], "%H:%M")
+            if court_group(record["court_name"]) != court_group(row["court_name"]):
+                continue
+            other = datetime.strptime(str(row["start_time"])[:5], "%H:%M")
             other_begin = other.hour * 60 + other.minute
             other_finish = other_begin + int(row["duration_minutes"])
             if begin < other_finish and other_begin < finish:

@@ -1,15 +1,15 @@
 $ErrorActionPreference = "Stop"
 
 $projectPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$distributionPath = Join-Path $projectPath "dist\Cancha"
+$distributionPath = Join-Path $projectPath "dist\App 1.0"
 $version = "1.2.0"
-$outputPath = Join-Path $projectPath "dist\installer\Cancha-Setup-$version.exe"
+$outputPath = Join-Path $projectPath "dist\installer\App-1.0-Setup-$version.exe"
 $iexpressPath = Join-Path $env:WINDIR "System32\iexpress.exe"
 $temporaryRoot = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
-$stagingPath = Join-Path $env:TEMP ("CanchaInstaller-" + [guid]::NewGuid().ToString('N'))
+$stagingPath = Join-Path $env:TEMP ("AppInstaller-" + [guid]::NewGuid().ToString('N'))
 
-if (-not (Test-Path -LiteralPath (Join-Path $distributionPath "Cancha.exe"))) {
-    throw "Primero debe generarse dist\Cancha con PyInstaller."
+if (-not (Test-Path -LiteralPath (Join-Path $distributionPath "App 1.0.exe"))) {
+    throw "Primero debe generarse dist\App 1.0 con PyInstaller."
 }
 if (-not (Test-Path -LiteralPath $iexpressPath)) {
     throw "No se encontró IExpress, incluido con Windows."
@@ -17,71 +17,87 @@ if (-not (Test-Path -LiteralPath $iexpressPath)) {
 
 New-Item -ItemType Directory -Force -Path $stagingPath | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $outputPath) | Out-Null
-$archivePath = Join-Path $stagingPath "Cancha.zip"
-Compress-Archive -Path (Join-Path $distributionPath "*") -DestinationPath $archivePath -CompressionLevel Optimal
+$archivePath = Join-Path $stagingPath "App 1.0.zip"
+$payloadPath = Join-Path $stagingPath "payload"
+New-Item -ItemType Directory -Force -Path $payloadPath | Out-Null
+$archiveReady = $false
+for ($attempt = 1; $attempt -le 5 -and -not $archiveReady; $attempt++) {
+    try {
+        Start-Sleep -Seconds 2
+        Copy-Item -Path (Join-Path $distributionPath "*") -Destination $payloadPath -Recurse -Force -ErrorAction Stop
+        Compress-Archive -Path (Join-Path $payloadPath "*") -DestinationPath $archivePath -CompressionLevel Optimal -ErrorAction Stop
+        $archiveReady = $true
+    } catch {
+        Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue
+        if ($attempt -eq 5) {
+            throw "No se pudo preparar el paquete. Cierra App 1.0 y vuelve a ejecutar este script. Detalle: $_"
+        }
+        Start-Sleep -Seconds 3
+    }
+}
 
 $installScript = @'
 $ErrorActionPreference = "Stop"
-$installDir = Join-Path $env:LOCALAPPDATA "Programs\Cancha"
-$menuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Cancha"
-$uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Cancha"
+$installDir = Join-Path $env:LOCALAPPDATA "Programs\App 1.0"
+$menuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\App 1.0"
+$uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\App 1.0"
 
 try {
-    if (Get-Process -Name "Cancha" -ErrorAction SilentlyContinue) {
-        throw "Cierra Cancha antes de instalar la actualización."
+    if (Get-Process -Name "App 1.0" -ErrorAction SilentlyContinue) {
+        throw "Cierra App 1.0 antes de instalar la actualización."
     }
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-    Expand-Archive -LiteralPath (Join-Path $PSScriptRoot "Cancha.zip") -DestinationPath $installDir -Force
-    Set-Content -LiteralPath (Join-Path $installDir "version.txt") -Value "1.2.0" -Encoding ASCII
+    Expand-Archive -LiteralPath (Join-Path $PSScriptRoot "App 1.0.zip") -DestinationPath $installDir -Force
+    Set-Content -LiteralPath (Join-Path $installDir "version.txt") -Value $version -Encoding ASCII
     $uninstaller = Join-Path $installDir "uninstall.ps1"
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "uninstall.ps1") -Destination $uninstaller -Force
 
     New-Item -ItemType Directory -Force -Path $menuDir | Out-Null
     $shell = New-Object -ComObject WScript.Shell
-    $appShortcut = $shell.CreateShortcut((Join-Path $menuDir "Cancha.lnk"))
-    $appShortcut.TargetPath = Join-Path $installDir "Cancha.exe"
+    $appShortcut = $shell.CreateShortcut((Join-Path $menuDir "App 1.0.lnk"))
+    $appShortcut.TargetPath = Join-Path $installDir "App 1.0.exe"
     $appShortcut.WorkingDirectory = $installDir
     $appShortcut.Save()
-    $uninstallShortcut = $shell.CreateShortcut((Join-Path $menuDir "Desinstalar Cancha.lnk"))
+    $uninstallShortcut = $shell.CreateShortcut((Join-Path $menuDir "Desinstalar App 1.0.lnk"))
     $uninstallShortcut.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
     $uninstallShortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$uninstaller`""
     $uninstallShortcut.Save()
-    $desktopShortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Cancha.lnk"))
-    $desktopShortcut.TargetPath = Join-Path $installDir "Cancha.exe"
+    $desktopShortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "App 1.0.lnk"))
+    $desktopShortcut.TargetPath = Join-Path $installDir "App 1.0.exe"
     $desktopShortcut.WorkingDirectory = $installDir
     $desktopShortcut.Save()
 
     New-Item -Path $uninstallKey -Force | Out-Null
-    New-ItemProperty -Path $uninstallKey -Name DisplayName -Value "Cancha" -PropertyType String -Force | Out-Null
-    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value "1.2.0" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name DisplayName -Value "App 1.0" -PropertyType String -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name DisplayVersion -Value $version -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name InstallLocation -Value $installDir -PropertyType String -Force | Out-Null
     New-ItemProperty -Path $uninstallKey -Name UninstallString -Value "`"$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe`" -NoProfile -ExecutionPolicy Bypass -File `"$uninstaller`"" -PropertyType String -Force | Out-Null
 
     Add-Type -AssemblyName PresentationFramework
-    [System.Windows.MessageBox]::Show("Cancha se instaló correctamente. Encontrarás accesos en el Escritorio y en el menú Inicio.", "Cancha") | Out-Null
+    [System.Windows.MessageBox]::Show("App 1.0 se instalo correctamente. Encontraras los accesos en el Escritorio y el menu Inicio.", "App 1.0") | Out-Null
 } catch {
     Add-Type -AssemblyName PresentationFramework
-    [System.Windows.MessageBox]::Show("No se pudo completar la instalación:`n$_", "Instalación de Cancha") | Out-Null
+    [System.Windows.MessageBox]::Show("No se pudo completar la instalación:`n$_", "Instalación de App 1.0") | Out-Null
     exit 1
 }
 '@
 Set-Content -LiteralPath (Join-Path $stagingPath "install.ps1") -Value $installScript -Encoding UTF8
 
 $uninstallScript = @'
-$installDir = Join-Path $env:LOCALAPPDATA "Programs\Cancha"
-$menuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Cancha"
-Remove-Item -LiteralPath (Join-Path $menuDir "Cancha.lnk") -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath (Join-Path $menuDir "Desinstalar Cancha.lnk") -Force -ErrorAction SilentlyContinue
+$installDir = Join-Path $env:LOCALAPPDATA "Programs\App 1.0"
+$menuDir = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\App 1.0"
+Remove-Item -LiteralPath (Join-Path $menuDir "App 1.0.lnk") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $menuDir "Desinstalar App 1.0.lnk") -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $menuDir -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath("Desktop")) "Cancha.lnk") -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Cancha" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath "HKCU:\Software\Cancha" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath("Desktop")) "App 1.0.lnk") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\App 1.0" -Recurse -Force -ErrorAction SilentlyContinue
+# Se conservan las preferencias guardadas bajo HKCU:\Software\Cancha.
 $command = "timeout /t 2 /nobreak >nul & rmdir /s /q `"$installDir`""
 Start-Process -FilePath "$env:WINDIR\System32\cmd.exe" -ArgumentList "/c $command" -WindowStyle Hidden
 '@
 Set-Content -LiteralPath (Join-Path $stagingPath "uninstall.ps1") -Value $uninstallScript -Encoding UTF8
 
-$temporaryInstaller = Join-Path $stagingPath "Cancha-Setup-$version.exe"
+$temporaryInstaller = Join-Path $stagingPath "App-1.0-Setup-$version.exe"
 $sedContent = @"
 [Version]
 Class=IEXPRESS
@@ -99,14 +115,14 @@ InstallPrompt=
 DisplayLicense=
 FinishMessage=
 TargetName=$temporaryInstaller
-FriendlyName=Cancha $version
+FriendlyName=App 1.0 $version
 AppLaunched=powershell.exe -NoProfile -ExecutionPolicy Bypass -File install.ps1
 PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
 SourceFiles=SourceFiles
 [Strings]
-FILE0="Cancha.zip"
+FILE0="App 1.0.zip"
 FILE1="install.ps1"
 FILE2="uninstall.ps1"
 [SourceFiles]
@@ -116,7 +132,7 @@ SourceFiles0=$stagingPath\
 %FILE1%=
 %FILE2%=
 "@
-$sedPath = Join-Path $stagingPath "Cancha-installer.sed"
+$sedPath = Join-Path $stagingPath "App-1.0-installer.sed"
 Set-Content -LiteralPath $sedPath -Value $sedContent -Encoding Default
 
 Push-Location $env:TEMP
@@ -139,7 +155,7 @@ try {
         if ($stableReads -lt 3) { Start-Sleep -Seconds 2 }
     }
     if ($stableReads -lt 3) {
-        throw "IExpress no terminó de crear el instalador de Cancha."
+        throw "IExpress no terminó de crear el instalador de App 1.0."
     }
     Move-Item -LiteralPath $temporaryInstaller -Destination $outputPath -Force
     $installerBuilt = $true

@@ -8,7 +8,7 @@ from .supabase_client import SupabaseAuth, SupabaseAuthError
 class RecoveryDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Recuperar contrasena | Cancha")
+        self.setWindowTitle("Recuperar contrasena | App 1.0")
         self.setMinimumWidth(380)
         self.auth = SupabaseAuth()
         self.recovery_token = None

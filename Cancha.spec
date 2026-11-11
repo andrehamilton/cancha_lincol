@@ -8,8 +8,8 @@ a = Analysis(
     pathex=[str(root)],
     binaries=[],
     datas=[
-        (str(root / "admin_login.ui"), "."),
-        (str(root / "sONIASQ.jpg"), "."),
+        (str(root / "ui" / "admin_login.ui"), "ui"),
+        (str(root / "image" / "sONIASQ.jpg"), "image"),
     ],
     hiddenimports=["PySide6.QtUiTools"],
     hookspath=[],
@@ -26,7 +26,8 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Cancha",
+    name="App 1.0",
+    icon=str(root / "image" / "cancha.ico"),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -45,5 +46,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Cancha",
+    name="App 1.0",
 )

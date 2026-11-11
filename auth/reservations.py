@@ -17,6 +17,11 @@ DB_PATH = database_path()
 PERU_TZ = timezone(timedelta(hours=-5))
 
 
+def _court_group(name):
+    normalized = str(name or "").casefold().replace("ó", "o").replace("é", "e")
+    return "volley" if "voley" in normalized or "volley" in normalized else "football"
+
+
 def peru_now():
     return datetime.now(PERU_TZ)
 
@@ -119,21 +124,23 @@ class ReservationStore:
         )
 
     def _validate_and_check_overlap(self, record, exclude_id=None):
-        start = datetime.strptime(record["start_time"], "%H:%M").time()
+        start = datetime.strptime(str(record["start_time"])[:5], "%H:%M").time()
         start_minutes = start.hour * 60 + start.minute
         end_minutes = start_minutes + int(record["duration_minutes"])
         if end_minutes > 24 * 60:
             raise ValueError("La reserva no puede terminar después de la medianoche.")
         with self._connect() as connection:
             existing = connection.execute("""
-            SELECT id, start_time, duration_minutes FROM reservations
+            SELECT id, court_name, start_time, duration_minutes FROM reservations
                 WHERE reservation_date = ?
                     AND status IN ('Reservada', 'Confirmada')
             """, (record["reservation_date"],)).fetchall()
             for row in existing:
                 if row["id"] == exclude_id:
                     continue
-                other_start = datetime.strptime(row["start_time"], "%H:%M").time()
+                if _court_group(record["court_name"]) != _court_group(row["court_name"]):
+                    continue
+                other_start = datetime.strptime(str(row["start_time"])[:5], "%H:%M").time()
                 other_start_minutes = other_start.hour * 60 + other_start.minute
                 other_end_minutes = other_start_minutes + row["duration_minutes"]
                 if start_minutes < other_end_minutes and other_start_minutes < end_minutes:
@@ -210,12 +217,13 @@ class ReservationStore:
 
 
 class ReservationDialog(QtWidgets.QDialog):
-    def __init__(self, user, parent=None, store=None, list_mode=False):
+    def __init__(self, user, parent=None, store=None, list_mode=False, initial_court=""):
         super().__init__(parent)
         self.user = user
         self.store = store or ReservationStore()
+        self.initial_court = initial_court
         self._loading_reservation = False
-        self.setWindowTitle("Reservas de canchas | Cancha")
+        self.setWindowTitle("Reservas de canchas | App 1.0")
         self.setMinimumSize(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT)
         self.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         palette = theme_palette()
@@ -298,7 +306,9 @@ class ReservationDialog(QtWidgets.QDialog):
         schedule = QtWidgets.QGroupBox("Cancha y horario")
         schedule_layout = QtWidgets.QVBoxLayout(schedule)
         self.court = QtWidgets.QLineEdit()
-        self.court.setPlaceholderText("Cancha (por ejemplo: Cancha 1)")
+        self.court.setPlaceholderText("Cancha (por ejemplo: Cancha 1 o Vóley)")
+        if self.initial_court:
+            self.court.setText(self.initial_court)
         schedule_layout.addWidget(self.court)
 
         date_row = QtWidgets.QHBoxLayout()
@@ -380,13 +390,28 @@ class ReservationDialog(QtWidgets.QDialog):
         self.manager_document_type, manager_document_row = self._document_input_row()
         saved_document_type = self.user.get("document_type") or "DNI"
         self.manager_document_type.setCurrentText(saved_document_type)
+        self.manager_document_type.setEnabled(False)
+        self.manager_document_type.setStyleSheet(
+            f"QComboBox:disabled {{ background: {palette['highlight']}; "
+            f"color: {palette['muted']}; }}"
+        )
         manager_layout.addLayout(manager_document_row)
         self.manager_document = QtWidgets.QLineEdit(str(self.user.get("dni") or ""))
         self._configure_document_field(self.manager_document, self.manager_document_type)
+        self.manager_document.setReadOnly(True)
+        self.manager_document.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.manager_document.setStyleSheet(
+            f"background: {palette['highlight']}; color: {palette['muted']};"
+        )
         manager_layout.addWidget(self.manager_document)
         self.manager_phone = QtWidgets.QLineEdit(str(self.user.get("phone") or ""))
         self.manager_phone.setPlaceholderText("Celular: 9 dígitos")
         self._configure_phone_field(self.manager_phone)
+        self.manager_phone.setReadOnly(True)
+        self.manager_phone.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        self.manager_phone.setStyleSheet(
+            f"background: {palette['highlight']}; color: {palette['muted']};"
+        )
         for field in (self.manager_name, self.manager_phone):
             manager_layout.addWidget(field)
         layout.addWidget(manager)
@@ -432,10 +457,11 @@ class ReservationDialog(QtWidgets.QDialog):
         if self.availability_error:
             self.availability_status.setText("No se pudo consultar la agenda; las horas se comprobarán al guardar.")
         else:
-            self.availability_status.setText("Ocupaciones de toda la agenda sombreadas, sin importar la cancha.")
+            self.availability_status.setText("Los horarios se bloquean dentro del mismo deporte; fútbol y vóley son independientes.")
         reserved = [row for row in reservations
                     if row.get("status") in ("Reservada", "Confirmada")
-                    and str(row.get("id")) != str(self.editing_id)]
+                    and str(row.get("id")) != str(self.editing_id)
+                    and _court_group(self.court.text()) == _court_group(row.get("court_name"))]
         duration = self.duration.value()
         now = peru_now()
         is_today = self.date.date() == QtCore.QDate(now.year, now.month, now.day)
@@ -729,7 +755,7 @@ class ReservationDialog(QtWidgets.QDialog):
         if reservation is None or reservation["status"] in ("Confirmada", "Cerrada"):
             return
         dialog = ReservationDialog(self.user, self, self.store)
-        dialog.setWindowTitle("Editar reserva | Cancha")
+        dialog.setWindowTitle("Editar reserva | App 1.0")
         dialog._loading_reservation = True
         dialog.editing_id = reservation["id"]
         dialog.findChild(QtWidgets.QLabel).setText("Editar reserva")
@@ -761,7 +787,7 @@ class ReservationDialog(QtWidgets.QDialog):
         if reservation is None:
             return
         details = QtWidgets.QDialog(self)
-        details.setWindowTitle("Detalle de reserva | Cancha")
+        details.setWindowTitle("Detalle de reserva | App 1.0")
         details.setMinimumWidth(440)
         details.setStyleSheet(self.styleSheet())
         palette = theme_palette()

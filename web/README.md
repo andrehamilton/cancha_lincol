@@ -3,6 +3,18 @@
 Interfaz web adaptable a celular, tablet y laptop. Usa Supabase Auth y tablas
 Supabase con aislamiento de datos por cuenta.
 
+## Organización del JavaScript
+
+- `app.js`: importa el núcleo y arranca la aplicación.
+- `web_js/app-core.js`: crea el estado compartido y conecta los módulos.
+- `web_js/utils.js`: formato de fechas, moneda y texto.
+- `web_js/views.js`: construcción de las pantallas.
+- `web_js/form-actions.js`: formularios y acciones sobre reservas, productos y perfil.
+- `web_js/auth.js`: conexion con Supabase, inicio, registro y recuperacion de acceso.
+- `web_js/navigation.js`: inicio y cierre de sesion, navegacion y menu movil.
+- `web_js/events.js`: eventos de búsqueda, filtros e inventario.
+- `web_js/home-chart.js` y `web_js/report-chart.js`: gráficos del inicio y de reportes.
+
 ## Configuración
 
 1. En el proyecto Supabase asociado a esta aplicación, ejecuta el script

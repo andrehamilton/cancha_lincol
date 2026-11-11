@@ -175,12 +175,23 @@ class DailyIncomeChart(QtWidgets.QWidget):
             self.products, self.courts = {}, {}
             self.update()
             return
+        end = QtCore.QDate.currentDate()
+        start = end.addDays(-6)
+        start_text, end_text = start.toString("yyyy-MM-dd"), end.toString("yyyy-MM-dd")
         try:
-            self.products = self.inventory_store.daily_sales(7) if self.inventory_store is not None else {}
-            self.courts = self.reservation_store.daily_court_revenue(7) if self.reservation_store is not None else {}
+            self.products = self.inventory_store.sales_between(start_text, end_text) if self.inventory_store is not None else {}
+            self.courts = self.reservation_store.court_revenue_between(start_text, end_text) if self.reservation_store is not None else {}
         except Exception:
-            self.products, self.courts = {}, {}
+            try:
+                self.products = self.inventory_store.cached_daily_sales(7) if self.inventory_store is not None else {}
+                self.courts = self.reservation_store.cached_daily_court_revenue(7) if self.reservation_store is not None else {}
+            except Exception:
+                self.products, self.courts = {}, {}
         self.update()
+
+    def set_stores(self, inventory_store, reservation_store):
+        self.inventory_store = inventory_store
+        self.reservation_store = reservation_store
 
     def mouseMoveEvent(self, event):
         position = event.position()
@@ -256,6 +267,7 @@ class MenuCard(QtWidgets.QPushButton):
     def _icon_pixmap(name, main, pale):
         drawings = {
             "reserve": '<path d="M20 48h56M27 48V27h42v21M27 36h42M34 27v-7m28 7v-7"/><path d="M16 57h64M22 57l-5 16m57-16 5 16"/>',
+            "volley": '<path d="M48 16 78 33v30L48 80 18 63V33zM18 33l30 17 30-17M48 50v30"/><path d="M34 25c12 7 18 18 18 31M62 25C50 32 44 43 44 57"/>',
             "agenda": '<rect x="20" y="22" width="56" height="52" rx="7"/><path d="M20 37h56M32 16v13m32-13v13M31 48h8m9 0h8m9 0h8M31 60h8m9 0h8"/>',
             "inventory": '<path d="m48 17 29 16v33L48 82 19 66V33z"/><path d="m19 33 29 17 29-17M48 50v32M34 25l29 17"/>',
             "products": '<path d="M20 28h56v47H20zM20 40h56M31 17v20m34-20v20M29 52h12v12H29zm26 0h12v12H55z"/>',
@@ -276,7 +288,7 @@ class MenuCard(QtWidgets.QPushButton):
 class MenuWindow(QtWidgets.QMainWindow):
     def __init__(self, user, auth):
         super().__init__()
-        self.setWindowTitle("Cancha | Menú principal")
+        self.setWindowTitle("App 1.0 | Menú principal")
         self.resize(1100, 720)
         self.setMinimumSize(900, 620)
         self.user = user
@@ -292,7 +304,7 @@ class MenuWindow(QtWidgets.QMainWindow):
         layout.setContentsMargins(32, 20, 32, 16)
         layout.setSpacing(8)
 
-        brand = QtWidgets.QLabel("CANCHA  /  ADMINISTRACIÓN")
+        brand = QtWidgets.QLabel("APP 1.0  /  ADMINISTRACIÓN")
         brand.setObjectName("menuBrand")
         layout.addWidget(brand)
         self.welcome_title = QtWidgets.QLabel(f"¡Bienvenido, {user['full_name']}!")
@@ -323,6 +335,9 @@ class MenuWindow(QtWidgets.QMainWindow):
         self.reserve_card = MenuCard("Reservar una cancha", "Registrar una nueva reserva", "reserve", accent=True)
         self.reserve_card.clicked.connect(self.open_reservation_form)
         options.addWidget(self.reserve_card)
+        self.volley_reserve_card = MenuCard("Reserva cancha (Voley)", "Registrar una nueva reserva de Voley", "volley")
+        self.volley_reserve_card.clicked.connect(self.open_volley_reservation_form)
+        options.addWidget(self.volley_reserve_card)
         self.reservations_card = MenuCard("Reservas registradas", "Consultar, editar y confirmar reservas", "agenda")
         self.reservations_card.clicked.connect(self.show_reservations)
         options.addWidget(self.reservations_card)
@@ -361,6 +376,11 @@ class MenuWindow(QtWidgets.QMainWindow):
         footer.addWidget(self.logout_button)
         layout.addLayout(footer)
         self._apply_theme()
+        QtCore.QTimer.singleShot(0, self._load_dashboard_chart)
+
+    def _load_dashboard_chart(self):
+        if self._ensure_shared_stores("reports"):
+            self.activity_chart.refresh()
 
     def open_reservation_form(self):
         if not self._ensure_shared_stores("reservations"):
@@ -369,6 +389,14 @@ class MenuWindow(QtWidgets.QMainWindow):
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.activity_chart.refresh()
             QtWidgets.QMessageBox.information(self, "Reserva guardada", "La reserva se guardó correctamente.")
+
+    def open_volley_reservation_form(self):
+        if not self._ensure_shared_stores("reservations"):
+            return
+        dialog = ReservationDialog(self.user, self, self.reservation_store, initial_court="Voley")
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            self.activity_chart.refresh()
+            QtWidgets.QMessageBox.information(self, "Reserva guardada", "La reserva de Voley se guardó correctamente.")
 
     def show_reservations(self):
         if not self._ensure_shared_stores("reservations"):
@@ -407,6 +435,7 @@ class MenuWindow(QtWidgets.QMainWindow):
             }.get(section)
             if store is not None:
                 store.refresh_session(self.user)
+            self.activity_chart.set_stores(self.inventory_store, self.reservation_store)
             if section == "products":
                 # ProductsDialog loads the catalogue once when it opens.
                 pass

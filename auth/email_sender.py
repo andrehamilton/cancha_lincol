@@ -12,11 +12,11 @@ def send_verification_code(recipient, code):
         raise RuntimeError("Falta configurar CANCHA_SMTP_USER y CANCHA_SMTP_APP_PASSWORD.")
 
     message = EmailMessage()
-    message["Subject"] = "Codigo de verificacion de Cancha"
+    message["Subject"] = "Codigo de verificacion de App 1.0"
     message["From"] = sender
     message["To"] = recipient
     message.set_content(
-        f"Tu codigo de verificacion de Cancha es: {code}\n\n"
+        f"Tu codigo de verificacion de App 1.0 es: {code}\n\n"
         "Ingresalo en el formulario para confirmar tu cuenta."
     )
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:

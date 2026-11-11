@@ -12,6 +12,6 @@ if (-not (Test-Path -LiteralPath $pythonPath)) {
 if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar las dependencias de empaquetado." }
 
 & $pythonPath -m PyInstaller --noconfirm --clean Cancha.spec
-if ($LASTEXITCODE -ne 0) { throw "PyInstaller no pudo crear dist\Cancha." }
+if ($LASTEXITCODE -ne 0) { throw "PyInstaller no pudo crear dist\App 1.0." }
 
 & (Join-Path $projectPath "package_installer.ps1")

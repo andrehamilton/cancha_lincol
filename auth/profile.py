@@ -18,7 +18,7 @@ class ProfileDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.user = user
         self.auth = auth
-        self.setWindowTitle("Perfil | Cancha")
+        self.setWindowTitle("Perfil | App 1.0")
         self.setMinimumSize(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT)
         self.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         self.setStyleSheet(theme_stylesheet())
