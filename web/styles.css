@@ -28,3 +28,10 @@
 
 .report-stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px}.report-statuses{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 2px;border-top:1px solid var(--outline);border-bottom:1px solid var(--outline);font-size:11px}.report-statuses>strong{margin-right:5px}.report-detail{margin:18px 0 0;padding:16px 0 0;border:0;border-top:1px solid var(--outline);border-radius:0;box-shadow:none}.report-note{padding:10px 2px 0;color:var(--muted);font-size:10px;line-height:1.5}@media(max-width:760px){.report-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.report-statuses{align-items:flex-start}}
 .register-password-hint{font-size:11px;line-height:1.5;color:var(--muted);margin:8px 0 0}
+
+/* Keep lower sidebar actions reachable on shorter screens. */
+.sidebar{overflow-y:auto}
+.sidebar .brand{padding-bottom:20px}
+.sidebar nav .nav-item{min-height:40px}
+.sidebar-bottom .sync-note{margin-bottom:8px;padding:9px 10px}
+.sidebar-bottom .nav-item{min-height:36px}
