@@ -3,14 +3,14 @@
 ## Datos compartidos entre dispositivos
 
 La app guarda productos, inventario y reservas en Supabase. Los dispositivos
-comparten la informacion cuando inician sesion con la misma cuenta. Cada cuenta
-mantiene un espacio de datos privado; crear varias cuentas no las agrupa en una
-misma empresa.
+comparten la informacion cuando inician sesion con la misma cuenta. Las cuentas registradas comparten un mismo espacio de datos. La cuenta
+administradora puede cambiar el modo a datos individuales desde Configuraciones
+en la web.
 
 Antes de usar la version con datos compartidos, abre **SQL Editor** en el
 proyecto Supabase configurado en la app, pega y ejecuta el contenido de
 `SUPABASE_SHARED_DATA.sql`. El script crea las tablas y activa politicas RLS
-para que cada cuenta solo consulte sus propios registros. La instalacion requiere
+para que todas las cuentas compartan el espacio del negocio o puedan volver al modo individual desde Configuraciones. La instalacion requiere
 conexion a Internet para leer y modificar esos datos.
 
 Los registros que ya estan en `cancha_reservas.db` no se copian solos a Supabase.

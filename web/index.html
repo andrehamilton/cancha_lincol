@@ -25,7 +25,10 @@
       <label class="register-name hidden" id="registerNameLabel">Nombre completo<input id="registerName" type="text" autocomplete="name" placeholder="Tu nombre"></label>
       <label>Correo electrónico<input id="email" type="email" autocomplete="username" placeholder="tu@correo.com" required></label>
       <label>Contraseña<input id="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></label>
+      <p class="register-password-hint hidden" id="registerPasswordHint">Para crear tu cuenta, usa al menos 8 caracteres e incluye may&uacute;scula, min&uacute;scula, n&uacute;mero y s&iacute;mbolo.</p>
       <label class="register-confirm hidden" id="registerConfirmLabel">Confirmar contraseña<input id="registerConfirm" type="password" autocomplete="new-password" placeholder="Repite la contraseña"></label>
+      <label class="hidden" id="registerCodeLabel">Codigo de verificacion<input id="registerCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Codigo recibido por correo"></label>
+      <button class="text-button full hidden" type="button" id="resendCodeButton">Volver a enviar el codigo</button>
       <button class="button primary full" type="submit">Ingresar <span>→</span></button>
       <button class="text-button full" type="button" id="forgotButton">¿Olvidaste tu contraseña?</button>
       <div class="notice" id="loginNotice" role="status"></div>
@@ -41,10 +44,11 @@
         <button class="nav-item active" data-page="inicio"><span class="nav-icon">⌂</span>Inicio</button>
         <button class="nav-item" data-page="reservas"><span class="nav-icon">▦</span>Reservas</button>
         <button class="nav-item" data-page="inventario"><span class="nav-icon">▤</span>Inventario</button>
+        <button class="nav-item" data-page="almacen"><span class="nav-icon">▣</span>Almacen</button>
         <button class="nav-item" data-page="productos"><span class="nav-icon">◇</span>Productos</button>
         <button class="nav-item" data-page="reportes"><span class="nav-icon">⌁</span>Reportes</button>
       </nav>
-      <div class="sidebar-bottom"><div class="sync-note"><span class="sync-dot"></span><span>Datos sincronizados<small>Almacenamiento compartido</small></span></div><button class="nav-item" data-page="perfil"><span class="nav-icon">◉</span>Mi perfil</button><button class="nav-item" id="logoutButton"><span class="nav-icon">↪</span>Cerrar sesión</button></div>
+      <div class="sidebar-bottom"><div class="sync-note"><span class="sync-dot"></span><span>Datos sincronizados<small>Almacenamiento compartido</small></span></div><button class="nav-item" data-page="perfil"><span class="nav-icon">◉</span>Mi perfil</button><button class="nav-item" data-page="configuracion"><span class="nav-icon">⚙</span>Configuraciones</button><button class="nav-item" id="logoutButton"><span class="nav-icon">↪</span>Cerrar sesión</button></div>
     </aside>
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <main class="main-area">

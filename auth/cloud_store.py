@@ -17,12 +17,27 @@ class CloudStore:
             raise SupabaseAuthError("Inicia sesion para acceder a los datos compartidos.")
         if not self._owner_id:
             raise SupabaseAuthError("La sesión no incluye el identificador de usuario de Supabase.")
+        self._owner_id = self._shared_owner_id()
+
+    def _shared_owner_id(self):
+        owner_id = self.auth.data_request(
+            "/rest/v1/rpc/shared_data_owner_id", payload={},
+            access_token=self.token, method="POST",
+        )
+        if isinstance(owner_id, list) and owner_id:
+            owner_id = owner_id[0]
+        if isinstance(owner_id, dict):
+            owner_id = owner_id.get("shared_data_owner_id")
+        if not owner_id:
+            raise SupabaseAuthError("No se pudo identificar el espacio de datos compartido.")
+        return str(owner_id)
 
     def refresh_session(self, user):
         self.token = user.get("access_token")
         self._owner_id = user.get("id")
         if not self.token or not self._owner_id:
             raise SupabaseAuthError("La sesión ya no es válida. Inicia sesión nuevamente.")
+        self._owner_id = self._shared_owner_id()
 
     def _initialize_table(self, sql):
         with sqlite3.connect(self.db_path) as connection:
@@ -70,10 +85,13 @@ class ProductCloudStore(CloudStore):
                 id INTEGER NOT NULL, owner_id TEXT NOT NULL, name TEXT NOT NULL,
                 description TEXT NOT NULL DEFAULT '', entry_date TEXT NOT NULL,
                 cost_price REAL NOT NULL, sale_price REAL NOT NULL,
-                created_at TEXT NOT NULL DEFAULT '', PRIMARY KEY(owner_id, id)
+                created_at TEXT NOT NULL DEFAULT '', origin_owner_id TEXT, PRIMARY KEY(owner_id, id)
             )
         """)
-
+        with sqlite3.connect(self.db_path) as connection:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(shared_products)")}
+            if "origin_owner_id" not in columns:
+                connection.execute("ALTER TABLE shared_products ADD COLUMN origin_owner_id TEXT")
     def refresh_cache(self):
         rows = self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&select=*&order=name.asc,id.asc")
         self._cache_all("shared_products", rows)
@@ -138,10 +156,16 @@ class InventoryCloudStore(CloudStore):
             CREATE TABLE IF NOT EXISTS shared_inventory_daily (
                 inventory_date TEXT NOT NULL, product_id INTEGER NOT NULL,
                 owner_id TEXT NOT NULL, stock REAL NOT NULL DEFAULT 0, added REAL NOT NULL DEFAULT 0,
-                closing REAL NOT NULL DEFAULT 0, total REAL NOT NULL DEFAULT 0,
+                closing REAL NOT NULL DEFAULT 0, total REAL NOT NULL DEFAULT 0, warehouse_received REAL NOT NULL DEFAULT 0, origin_owner_id TEXT,
                 PRIMARY KEY (owner_id, inventory_date, product_id)
             )
         """)
+        with sqlite3.connect(self.db_path) as connection:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(shared_inventory_daily)")}
+            if "warehouse_received" not in columns:
+                connection.execute("ALTER TABLE shared_inventory_daily ADD COLUMN warehouse_received REAL NOT NULL DEFAULT 0")
+            if "origin_owner_id" not in columns:
+                connection.execute("ALTER TABLE shared_inventory_daily ADD COLUMN origin_owner_id TEXT")
 
     def refresh_cache(self):
         from datetime import date, timedelta
@@ -150,7 +174,7 @@ class InventoryCloudStore(CloudStore):
         rows = self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&inventory_date=in.({','.join(days)})&select=*")
         with sqlite3.connect(self.db_path) as connection:
             connection.execute("DELETE FROM shared_inventory_daily WHERE owner_id=? AND inventory_date BETWEEN ? AND ?", (self._owner_id, days[-1], days[0]))
-            connection.executemany("INSERT OR REPLACE INTO shared_inventory_daily (inventory_date, product_id, owner_id, stock, added, closing, total) VALUES (?, ?, ?, ?, ?, ?, ?)", [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"]) for row in rows])
+            connection.executemany("INSERT OR REPLACE INTO shared_inventory_daily (inventory_date, product_id, owner_id, stock, added, closing, total, warehouse_received) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"], row.get("warehouse_received",0)) for row in rows])
 
     def sync_day(self, day):
         rows = self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&inventory_date=eq.{day}&select=*")
@@ -158,15 +182,15 @@ class InventoryCloudStore(CloudStore):
             connection.execute("DELETE FROM shared_inventory_daily WHERE owner_id=? AND inventory_date=?", (self._owner_id, day))
             connection.executemany("""
                 INSERT OR REPLACE INTO shared_inventory_daily
-                (inventory_date, product_id, owner_id, stock, added, closing, total)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"]) for row in rows])
+                (inventory_date, product_id, owner_id, stock, added, closing, total, warehouse_received)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"], row.get("warehouse_received",0)) for row in rows])
 
     def sync_chart_range(self, start, end):
         rows = self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&inventory_date=gte.{start}&inventory_date=lte.{end}&select=*")
         with sqlite3.connect(self.db_path) as connection:
             connection.execute("DELETE FROM shared_inventory_daily WHERE owner_id=? AND inventory_date BETWEEN ? AND ?", (self._owner_id, start, end))
-            connection.executemany("INSERT OR REPLACE INTO shared_inventory_daily (inventory_date, product_id, owner_id, stock, added, closing, total) VALUES (?, ?, ?, ?, ?, ?, ?)", [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"]) for row in rows])
+            connection.executemany("INSERT OR REPLACE INTO shared_inventory_daily (inventory_date, product_id, owner_id, stock, added, closing, total, warehouse_received) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"], row.get("warehouse_received",0)) for row in rows])
 
     def _sync_cached_days(self, start, end):
         from datetime import date, timedelta
@@ -182,12 +206,23 @@ class InventoryCloudStore(CloudStore):
             connection.row_factory = sqlite3.Row
             saved = [dict(row) for row in connection.execute("SELECT * FROM shared_inventory_daily WHERE inventory_date=? AND owner_id=?", (day, self._owner_id))]
         by_product = {row["product_id"]: row for row in saved}
+        warehouse_rows = self._request(
+            "warehouse_daily",
+            f"?owner_id=eq.{self._owner_id}&inventory_date=eq.{day}&select=product_id,transferred_to_store",
+        )
+        warehouse_received = {row["product_id"]: row.get("transferred_to_store", 0) for row in warehouse_rows}
+        with sqlite3.connect(self.db_path) as connection:
+            connection.executemany(
+                "UPDATE shared_inventory_daily SET warehouse_received=?, total=stock+added+? WHERE owner_id=? AND inventory_date=? AND product_id=?",
+                [(value, value, self._owner_id, day, product_id) for product_id, value in warehouse_received.items()],
+            )
         result = []
         for product in products:
             row = by_product.get(product["id"], {})
             stock, added = row.get("stock", 0), row.get("added", 0)
+            received = warehouse_received.get(product["id"], row.get("warehouse_received", 0))
             result.append({"product_id": product["id"], "name": product["name"],
-                           "stock": stock, "added": added, "total": stock + added,
+                           "stock": stock, "added": added, "warehouse_received": received, "total": stock + added + received,
                            "closing": row.get("closing", 0)})
         return result
 
@@ -202,18 +237,24 @@ class InventoryCloudStore(CloudStore):
             raise ValueError("Este inventario ya supero el plazo de 7 dias y no se puede modificar.")
         payload = [{"inventory_date": day, "product_id": row["product_id"],
                     "stock": row["stock"], "added": row["added"],
-                    "closing": row["closing"], "total": row["total"],
+                    "closing": row["closing"], "total": row["total"], "warehouse_received": row.get("warehouse_received",0),
                     "owner_id": self._owner_id} for row in rows]
         if payload:
             self._request(self.TABLE, "?on_conflict=owner_id,inventory_date,product_id",
                           payload=payload, method="POST",
                           prefer="resolution=merge-duplicates,handling=strict")
+            self.refresh_cache()
+
+    def transfer_to_store(self, day, transfers):
+        if transfers:
+            self._request("rpc/adjust_warehouse_store_transfer", payload={"p_date": day, "p_transfers": transfers}, method="POST")
+            self.refresh_cache()
             with sqlite3.connect(self.db_path) as connection:
                 connection.executemany("""
-                    INSERT OR REPLACE INTO shared_inventory_daily
-                    (inventory_date, product_id, owner_id, stock, added, closing, total)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, [(day, row["product_id"], self._owner_id, row["stock"], row["added"], row["closing"], row["total"]) for row in rows])
+                    UPDATE shared_inventory_daily SET warehouse_received=?, total=stock+added+?
+                    WHERE owner_id=? AND inventory_date=? AND product_id=?
+                """, [(row["warehouse_received"], row["warehouse_received"], self._owner_id, day, row["product_id"])
+                      for row in self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&inventory_date=eq.{day}&select=product_id,warehouse_received")])
 
     def delete_product_days(self, product_id):
         self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&product_id=eq.{product_id}", method="DELETE")
@@ -255,10 +296,81 @@ class InventoryCloudStore(CloudStore):
                                (self._owner_id, start_date, end_date))
             connection.executemany("""
                 INSERT OR REPLACE INTO shared_inventory_daily
-                (inventory_date, product_id, owner_id, stock, added, closing, total)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"]) for row in rows])
+                (inventory_date, product_id, owner_id, stock, added, closing, total, warehouse_received)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["closing"], row["total"], row.get("warehouse_received",0)) for row in rows])
         return self._sales(start_date, end_date)
+
+
+class WarehouseCloudStore(CloudStore):
+    """Existencias de almacén en una tabla separada del inventario de tienda."""
+    TABLE = "warehouse_daily"
+
+    def __init__(self, auth, user, product_store):
+        super().__init__(auth, user)
+        self.products = product_store
+        self._initialize_table("""
+            CREATE TABLE IF NOT EXISTS shared_warehouse_daily (
+                inventory_date TEXT NOT NULL, product_id INTEGER NOT NULL,
+                owner_id TEXT NOT NULL, stock REAL NOT NULL DEFAULT 0,
+                added REAL NOT NULL DEFAULT 0, transferred_to_store REAL NOT NULL DEFAULT 0,
+                total REAL NOT NULL DEFAULT 0, origin_owner_id TEXT,
+                PRIMARY KEY (owner_id, inventory_date, product_id)
+            )
+        """)
+        with sqlite3.connect(self.db_path) as connection:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(shared_warehouse_daily)")}
+            if "transferred_to_store" not in columns:
+                connection.execute("ALTER TABLE shared_warehouse_daily ADD COLUMN transferred_to_store REAL NOT NULL DEFAULT 0")
+            if "origin_owner_id" not in columns:
+                connection.execute("ALTER TABLE shared_warehouse_daily ADD COLUMN origin_owner_id TEXT")
+
+    def rows_for_date(self, day):
+        rows = self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&inventory_date=lte.{day}&select=*&order=inventory_date.desc")
+        rows = sorted(rows, key=lambda row: (row["inventory_date"], row["product_id"]), reverse=True)
+        with sqlite3.connect(self.db_path) as connection:
+            connection.execute("DELETE FROM shared_warehouse_daily WHERE owner_id=? AND inventory_date=?", (self._owner_id, day))
+            connection.executemany("""
+                INSERT OR REPLACE INTO shared_warehouse_daily
+                (inventory_date, product_id, owner_id, stock, added, transferred_to_store, total)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, [(row["inventory_date"], row["product_id"], row["owner_id"], row["stock"], row["added"], row["transferred_to_store"], row["total"]) for row in rows])
+        by_product = {}
+        for row in rows:
+            by_product.setdefault(row["product_id"], row)
+        result = []
+        for product in self.products.list_all():
+            row = by_product.get(product["id"], {})
+            inherited = row.get("inventory_date") != day
+            stock, added = (row.get("total", 0), 0) if inherited else (row.get("stock", 0), row.get("added", 0))
+            result.append({"product_id": product["id"], "name": product["name"], "stock": stock,
+                           "added": added, "total": row.get("total", stock + added), "transferred_to_store": 0 if inherited else row.get("transferred_to_store", 0)})
+        return result
+
+    @staticmethod
+    def is_editable(day, today=None):
+        from datetime import date
+        return date.fromisoformat(day) <= (today or date.today())
+
+    def save_day(self, day, rows):
+        if not self.is_editable(day):
+            raise ValueError("No se puede registrar stock en una fecha futura.")
+        payload = [{"owner_id": self._owner_id, "inventory_date": day, **row} for row in rows]
+        if payload:
+            self._request(self.TABLE, "?on_conflict=owner_id,inventory_date,product_id", payload=payload,
+                          method="POST", prefer="resolution=merge-duplicates,handling=strict")
+            with sqlite3.connect(self.db_path) as connection:
+                connection.executemany("""
+                    INSERT OR REPLACE INTO shared_warehouse_daily
+                    (inventory_date, product_id, owner_id, stock, added, transferred_to_store, total)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, [(day, row["product_id"], self._owner_id, row["stock"], row["added"], row.get("transferred_to_store",0), row["total"]) for row in rows])
+
+
+    def transfer_to_store(self, day, transfers):
+        if not transfers:
+            return
+        self._request("rpc/transfer_warehouse_to_store", payload={"p_date": day, "p_transfers": transfers}, method="POST")
 
 
 class ReservationCloudStore(CloudStore):
@@ -279,9 +391,13 @@ class ReservationCloudStore(CloudStore):
                 duration_minutes INTEGER NOT NULL, notes TEXT, created_by_user_id TEXT,
                 created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Reservada',
                 hourly_rate REAL NOT NULL DEFAULT 0, reservation_amount REAL NOT NULL DEFAULT 0,
-                PRIMARY KEY(owner_id, id)
+                origin_owner_id TEXT, PRIMARY KEY(owner_id, id)
             )
         """)
+        with sqlite3.connect(self.db_path) as connection:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(shared_reservations)")}
+            if "origin_owner_id" not in columns:
+                connection.execute("ALTER TABLE shared_reservations ADD COLUMN origin_owner_id TEXT")
 
     def refresh_cache(self):
         self._cache_all("shared_reservations", self._request(self.TABLE, f"?owner_id=eq.{self._owner_id}&select=*&order=reservation_date.desc,start_time.desc,id.desc"))

@@ -2,14 +2,14 @@
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .inventory import InventoryDialog
+from .inventory import InventoryDialog, WarehouseDialog
 from .products import ProductsDialog
 from .reservations import ReservationDialog
 from .reports import ReportsDialog
 from .profile import ProfileDialog
 from .settings import SettingsDialog
 from .theme import theme_palette, theme_stylesheet
-from .cloud_store import ProductCloudStore, InventoryCloudStore, ReservationCloudStore
+from .cloud_store import ProductCloudStore, InventoryCloudStore, WarehouseCloudStore, ReservationCloudStore
 
 
 class DailyIncomeChart(QtWidgets.QWidget):
@@ -295,6 +295,7 @@ class MenuWindow(QtWidgets.QMainWindow):
         self.auth = auth
         self.product_store = None
         self.inventory_store = None
+        self.warehouse_store = None
         self.reservation_store = None
 
         central = QtWidgets.QWidget()
@@ -344,6 +345,9 @@ class MenuWindow(QtWidgets.QMainWindow):
         self.inventory_card = MenuCard("Inventario", "Revisar stock, agregados y cierre diario", "inventory")
         self.inventory_card.clicked.connect(self.show_inventory)
         options.addWidget(self.inventory_card)
+        self.warehouse_card = MenuCard("Almacen", "Ver las existencias generales de productos", "inventory")
+        self.warehouse_card.clicked.connect(self.show_warehouse)
+        options.addWidget(self.warehouse_card)
         self.products_card = MenuCard("Productos", "Administrar el catálogo de productos", "products")
         self.products_card.clicked.connect(self.show_products)
         options.addWidget(self.products_card)
@@ -411,6 +415,11 @@ class MenuWindow(QtWidgets.QMainWindow):
         dialog.inventory_saved.connect(self.activity_chart.refresh)
         dialog.exec()
 
+    def show_warehouse(self):
+        if not self._ensure_shared_stores("warehouse"):
+            return
+        WarehouseDialog(self, inventory_store=self.warehouse_store).exec()
+
     def show_products(self):
         if not self._ensure_shared_stores("products"):
             return
@@ -424,13 +433,16 @@ class MenuWindow(QtWidgets.QMainWindow):
         try:
             if self.product_store is None:
                 self.product_store = ProductCloudStore(self.auth, self.user)
-            if section in ("inventory", "reports") and self.inventory_store is None:
+            if section in ("inventory", "warehouse", "reports") and self.inventory_store is None:
                 self.inventory_store = InventoryCloudStore(self.auth, self.user, self.product_store)
+            if section in ("inventory", "warehouse") and self.warehouse_store is None:
+                self.warehouse_store = WarehouseCloudStore(self.auth, self.user, self.product_store)
             if section in ("reservations", "reports") and self.reservation_store is None:
                 self.reservation_store = ReservationCloudStore(self.auth, self.user)
             store = {
                 "products": self.product_store,
                 "inventory": self.inventory_store,
+                "warehouse": self.warehouse_store,
                 "reservations": self.reservation_store,
             }.get(section)
             if store is not None:
@@ -504,7 +516,7 @@ class MenuWindow(QtWidgets.QMainWindow):
             QLabel#menuCardDescription {{ color: {palette['muted']}; font-size: 12px; }}
             QLabel#menuCardArrow {{ color: {palette['primary']}; font-size: 30px; padding-right: 2px; }}
         """)
-        for card in (self.reserve_card, self.reservations_card, self.inventory_card,
+        for card in (self.reserve_card, self.reservations_card, self.inventory_card, self.warehouse_card,
                      self.products_card, self.reports_card, self.profile_card, self.settings_card):
             card.refresh_icon()
         self.activity_chart.refresh()

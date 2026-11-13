@@ -1,7 +1,7 @@
 # Cancha Web
 
 Interfaz web adaptable a celular, tablet y laptop. Usa Supabase Auth y tablas
-Supabase con aislamiento de datos por cuenta.
+Supabase con datos compartidos entre las cuentas registradas del negocio.
 
 ## Organización del JavaScript
 
@@ -20,7 +20,7 @@ Supabase con aislamiento de datos por cuenta.
 1. En el proyecto Supabase asociado a esta aplicación, ejecuta el script
    `../SUPABASE_SHARED_DATA.sql` desde **SQL Editor**. Si ya hay datos antiguos,
    asigna las filas a la cuenta correcta mediante su UUID antes de ejecutar el
-   script; se detiene si encuentra filas sin propietario.
+   script. Consolida los registros existentes y activa el espacio compartido.
 2. `config.js` contiene el Project URL y la Publishable key. Esa clave es pública
    para clientes web; nunca uses una clave `service_role` o Secret key aquí.
    Confirma que las políticas RLS del SQL se aplicaron correctamente antes de
